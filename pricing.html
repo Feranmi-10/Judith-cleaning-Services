@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="pricing">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head">
+      <span class="kicker">Transparent Pricing</span>
+      <h2>Simple, Honest Prices</h2>
+      <p class="muted">No hidden fees. Final price = base price + rooms + add-ons + travel fee − plan discount.</p>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Service</th><th>Base Price</th><th>Per Bedroom</th><th>Per Bathroom</th><th>Duration</th><th></th></tr></thead>
+      <tbody id="price-rows"></tbody>
+    </table></div>
+
+    <div class="grid grid-3" style="margin-top:44px">
+      <div class="card"><h3><i data-icon="refresh"></i> Recurring Plans</h3><p class="muted" style="font-size:.92rem">Save automatically with a cleaning plan:</p>
+        <ul class="feature-li"><li>Weekly — <b>save 15%</b></li><li>Bi-weekly — <b>save 10%</b></li><li>Monthly — <b>save 5%</b></li></ul></div>
+      <div class="card"><h3><i data-icon="truck"></i> Travel Fees</h3><p class="muted" style="font-size:.92rem">Small travel fee by area, shown before you pay:</p>
+        <div id="area-list" style="font-size:.88rem;margin-top:8px"></div></div>
+      <div class="card"><h3><i data-icon="plus"></i> Popular Add-ons</h3><div id="addon-list" style="font-size:.9rem;margin-top:8px"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <h2>Want your exact price?</h2><p>Answer 4 quick questions in our instant calculator.</p>
+  <a href="calculator.html" class="btn btn-gold">Calculate My Price</a>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+(async () => {
+  const services = await DB.getServices();
+  document.getElementById("price-rows").innerHTML = services.map(s => `
+    <tr><td><b>${UI.svcIcon(s.icon,15)} ${UI.esc(s.name)}</b></td>
+    <td>${UI.money(s.base)}</td>
+    <td>${s.perBedroom ? "+" + UI.money(s.perBedroom) : "—"}</td>
+    <td>${s.perBathroom ? "+" + UI.money(s.perBathroom) : "—"}</td>
+    <td>${UI.esc(s.duration || "—")}</td>
+    <td><a class="btn btn-primary btn-sm" href="book.html?service=${s.id}">Book</a></td></tr>`).join("");
+  document.getElementById("area-list").innerHTML = Object.entries(CONFIG.AREAS)
+    .map(([a, f]) => `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${a}</span><b>${f ? UI.money(f) : "Free"}</b></div>`).join("");
+  document.getElementById("addon-list").innerHTML = CONFIG.ADDONS
+    .map(a => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)"><span>${a.name}</span><b>${UI.money(a.price)}</b></div>`).join("");
+})();
+</script>
+</body>
+</html>

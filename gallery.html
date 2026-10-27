@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="gallery">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head">
+      <span class="kicker">Before &amp; After</span>
+      <h2>Real Results from Real Jobs</h2>
+      <p class="muted">Every Judith job is photo-verified. Here's the proof.</p>
+    </div>
+    <div class="grid grid-2" id="gal-grid"></div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <h2>Your home could be next</h2><p>Book today and get your own before &amp; after.</p>
+  <a href="book.html" class="btn btn-gold">Book a Cleaning</a>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+const SAMPLES = [
+  { before: "https://res.cloudinary.com/dinypexvn/image/upload/v1792828958/judith-site/before-kitchen.jpg", after: "https://res.cloudinary.com/dinypexvn/image/upload/v1792828959/judith-site/after-kitchen.jpg", caption: "Deep Kitchen Clean — Lekki" },
+  { before: "https://res.cloudinary.com/dinypexvn/image/upload/v1792828960/judith-site/before-living.jpg", after: "https://res.cloudinary.com/dinypexvn/image/upload/v1792828961/judith-site/after-living.jpg", caption: "Standard Home Clean — Ikeja" }
+];
+(async () => {
+  const uploaded = await DB.listGallery();
+  const items = [...uploaded, ...SAMPLES];
+  document.getElementById("gal-grid").innerHTML = items.map(g => `
+    <div class="ba-card"><div class="ba-imgs">
+      <div><span class="ba-tag">BEFORE</span><img src="${g.before}" alt="Before" loading="lazy"></div>
+      <div><span class="ba-tag after">AFTER</span><img src="${g.after}" alt="After" loading="lazy"></div>
+    </div><div style="padding:14px 18px"><b>${UI.esc(g.caption)}</b></div></div>`).join("");
+})();
+</script>
+</body>
+</html>

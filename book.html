@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book a Cleaning — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="book">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head"><span class="kicker">Online Booking</span><h2>Book Your Cleaning</h2></div>
+    <div class="stepper" id="stepper">
+      <span>1. Service</span><span>2. Schedule</span><span>3. Your Details</span><span>4. Review &amp; Pay</span>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1.6fr 1fr;align-items:start">
+      <div>
+        <!-- STEP 1 -->
+        <div class="card step-pane" id="step-1">
+          <h3>Choose your service</h3>
+          <label>Service</label><select id="b-service"></select>
+          <div class="form-row">
+            <div><label>Bedrooms / rooms</label>
+              <div class="counter"><button type="button" onclick="bump('bed',-1)">−</button><b id="b-bed">2</b><button type="button" onclick="bump('bed',1)">+</button></div></div>
+            <div><label>Bathrooms</label>
+              <div class="counter"><button type="button" onclick="bump('bath',-1)">−</button><b id="b-bath">1</b><button type="button" onclick="bump('bath',1)">+</button></div></div>
+          </div>
+          <label>Add-ons</label><div class="pill-wrap" id="b-addons"></div>
+          <label>Cleaning plan</label><select id="b-freq"></select>
+          <button class="btn btn-primary" style="margin-top:22px" onclick="go(2)">Continue →</button>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="card step-pane" id="step-2" hidden>
+          <h3>Pick date, time &amp; location</h3>
+          <div class="form-row">
+            <div><label>Date</label><input type="date" id="b-date"></div>
+            <div><label>Area</label><select id="b-area"></select></div>
+          </div>
+          <label>Time slot</label><div class="slots" id="b-slots"></div>
+          <label>Street address</label>
+          <textarea id="b-address" rows="2" placeholder="House number, street, estate, landmark…"></textarea>
+          <div style="display:flex;gap:10px;margin-top:22px">
+            <button class="btn btn-ghost" onclick="go(1)">← Back</button>
+            <button class="btn btn-primary" onclick="go(3)">Continue →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="card step-pane" id="step-3" hidden>
+          <h3>Your contact details</h3>
+          <p class="muted" id="login-hint" style="font-size:.88rem">Have an account? <a href="#" onclick="loginRedirect();return false">Log in</a> to autofill and track this booking in your dashboard.</p>
+          <div class="form-row">
+            <div><label>Full name</label><input id="b-name" placeholder="e.g. Adaeze Obi"></div>
+            <div><label>Phone / WhatsApp</label><input id="b-phone" placeholder="0801 234 5678"></div>
+          </div>
+          <label>Email</label><input id="b-email" type="email" placeholder="you@example.com">
+          <label>Notes for the cleaner (optional)</label>
+          <textarea id="b-notes" rows="2" placeholder="Pets, parking, gate code, focus areas…"></textarea>
+          <div style="display:flex;gap:10px;margin-top:22px">
+            <button class="btn btn-ghost" onclick="go(2)">← Back</button>
+            <button class="btn btn-primary" onclick="go(4)">Review Booking →</button>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="card step-pane" id="step-4" hidden>
+          <h3>Review &amp; payment</h3>
+          <div id="b-review"></div>
+          <label>Promo code</label>
+          <div style="display:flex;gap:10px">
+            <input id="b-promo" placeholder="e.g. JUDITH10" style="flex:1">
+            <button class="btn btn-ghost" onclick="applyPromo()">Apply</button>
+          </div>
+          <p id="promo-msg" style="font-size:.85rem;margin-top:6px"></p>
+          <label style="margin-top:20px">Payment method</label>
+          <label class="pay-opt on" id="opt-card">
+            <input type="radio" name="pay" value="paystack" checked onchange="payOpt()">
+            <span><b><i data-icon="credit-card"></i> Pay online now (Paystack)</b><br><span class="muted" style="font-size:.85rem">Card, bank transfer or USSD. Secure checkout.</span></span>
+          </label>
+          <label class="pay-opt" id="opt-cash">
+            <input type="radio" name="pay" value="cash" onchange="payOpt()">
+            <span><b><i data-icon="wallet"></i> Pay after service</b><br><span class="muted" style="font-size:.85rem">Cash or transfer to our account when the job is done.</span></span>
+          </label>
+          <div style="display:flex;gap:10px;margin-top:22px">
+            <button class="btn btn-ghost" onclick="go(3)">← Back</button>
+            <button class="btn btn-gold" style="flex:1" id="confirm-btn" onclick="confirmBooking()">Confirm Booking</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quote-box"><h3>Booking Summary</h3><div id="q-body"></div></div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+let services = [], step = 1, promo = null;
+const state = { bed: 2, bath: 1, addons: [], slot: null };
+
+function bump(k, d) { state[k] = Math.max(0, Math.min(12, state[k] + d)); document.getElementById("b-" + k).textContent = state[k]; calc(); }
+function $v(id) { return document.getElementById(id).value; }
+
+function currentQuote() {
+  const svc = services.find(s => s.id === $v("b-service"));
+  const q = DB.quote({ service: svc, bedrooms: state.bed, bathrooms: state.bath, addons: state.addons, frequency: $v("b-freq"), area: $v("b-area") });
+  q.promoOff = 0;
+  if (promo) {
+    q.promoOff = promo.type === "percent" ? Math.round(q.total * promo.value / 100) : Math.min(promo.value, q.total);
+    q.total -= q.promoOff;
+  }
+  return { svc, q };
+}
+
+function calc() {
+  const { svc, q } = currentQuote();
+  document.getElementById("q-body").innerHTML = `
+    <div class="q-row"><span>${UI.esc(svc.name)} (${state.bed} bed, ${state.bath} bath)</span><span>${UI.money(q.subtotal - q.addonTotal)}</span></div>
+    <div class="q-row"><span>Add-ons (${state.addons.length})</span><span>${UI.money(q.addonTotal)}</span></div>
+    <div class="q-row"><span>Travel fee — ${UI.esc($v("b-area") || "—")}</span><span>${UI.money(q.travelFee)}</span></div>
+    <div class="q-row"><span>Plan discount</span><span class="neg">− ${UI.money(q.discount)}</span></div>
+    ${promo ? `<div class="q-row"><span>Promo ${promo.code}</span><span class="neg">− ${UI.money(q.promoOff)}</span></div>` : ""}
+    <div class="q-row total"><span>Total</span><span>${UI.money(q.total)}</span></div>
+    ${$v("b-date") ? `<div class="q-row"><span><i data-icon="calendar"></i> ${UI.fmtDate($v("b-date"))}</span><span>${state.slot || ""}</span></div>` : ""}`;
+}
+
+function go(n) {
+  if (n === 3 && step === 2) {
+    if (!$v("b-date")) return UI.toast("Please pick a date.", "err");
+    if (!state.slot) return UI.toast("Please pick a time slot.", "err");
+    if (!$v("b-address").trim()) return UI.toast("Please enter your street address.", "err");
+  }
+  if (n === 4 && step === 3) {
+    if (!$v("b-name").trim() || !$v("b-phone").trim() || !$v("b-email").trim())
+      return UI.toast("Please fill your name, phone and email.", "err");
+    renderReview();
+  }
+  step = n;
+  document.querySelectorAll(".step-pane").forEach((p, i) => p.hidden = (i + 1) !== n);
+  document.querySelectorAll("#stepper span").forEach((s, i) => {
+    s.className = i + 1 < n ? "done" : i + 1 === n ? "cur" : "";
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  calc();
+}
+
+function renderReview() {
+  const { svc, q } = currentQuote();
+  document.getElementById("b-review").innerHTML = `
+    <div style="background:var(--bg);border-radius:12px;padding:16px;font-size:.92rem;margin-bottom:8px">
+      <b>${svc.icon || ""} ${UI.esc(svc.name)}</b> — ${state.bed} bedroom(s), ${state.bath} bathroom(s)<br>
+      <i data-icon="calendar"></i> ${UI.fmtDate($v("b-date"))} at ${state.slot} · <i data-icon="pin"></i> ${UI.esc($v("b-area"))}, ${UI.esc($v("b-address"))}<br>
+      <i data-icon="user"></i> ${UI.esc($v("b-name"))} · ${UI.esc($v("b-phone"))} · ${UI.esc($v("b-email"))}<br>
+      <b style="color:var(--teal-d)">Total: ${UI.money(q.total)}</b>
+    </div>`;
+}
+
+async function applyPromo() {
+  const code = $v("b-promo");
+  const p = await DB.getPromo(code);
+  const msg = document.getElementById("promo-msg");
+  if (p) { promo = p; msg.innerHTML = `<span style="color:var(--green)"><i data-icon="check-circle"></i> ${p.code} applied — ${p.type === "percent" ? p.value + "% off" : UI.money(p.value) + " off"}!</span>`; }
+  else { promo = null; msg.innerHTML = `<span style="color:var(--red)"><i data-icon="x-circle"></i> Invalid or expired code.</span>`; }
+  renderReview(); calc();
+}
+
+function payOpt() {
+  const v = document.querySelector("input[name=pay]:checked").value;
+  document.getElementById("opt-card").classList.toggle("on", v === "paystack");
+  document.getElementById("opt-cash").classList.toggle("on", v === "cash");
+}
+
+function loginRedirect() { location.href = "login.html?next=" + encodeURIComponent("book.html" + location.search); }
+
+async function confirmBooking() {
+  const btn = document.getElementById("confirm-btn");
+  btn.disabled = true; btn.textContent = "Processing…";
+  try {
+    const { svc, q } = currentQuote();
+    const method = document.querySelector("input[name=pay]:checked").value;
+    const booking = {
+      userId: Auth.profile ? Auth.profile.id : null,
+      customer: { name: $v("b-name").trim(), phone: $v("b-phone").trim(), email: $v("b-email").trim() },
+      serviceId: svc.id, serviceName: svc.name, serviceIcon: svc.icon || "droplet",
+      details: { bedrooms: state.bed, bathrooms: state.bath, addons: state.addons, frequency: $v("b-freq") },
+      address: { area: $v("b-area"), street: $v("b-address").trim() },
+      date: $v("b-date"), time: state.slot,
+      notes: $v("b-notes").trim(),
+      price: { subtotal: q.subtotal, travelFee: q.travelFee, discount: q.discount, promo: promo ? promo.code : null, promoOff: q.promoOff, total: q.total },
+      payment: { method, status: "unpaid", ref: null },
+      photos: { before: [], after: [] },
+      cleanerId: null, cleanerName: null
+    };
+
+    if (method === "paystack" && CONFIG.PAYSTACK.publicKey && typeof PaystackPop !== "undefined") {
+      const handler = PaystackPop.setup({
+        key: CONFIG.PAYSTACK.publicKey,
+        email: booking.customer.email,
+        amount: q.total * 100,
+        currency: "NGN",
+        metadata: { custom_fields: [{ display_name: "Service", variable_name: "service", value: svc.name }] },
+        callback: function (resp) {
+          booking.payment = { method: "paystack", status: "paid", ref: resp.reference };
+          finalize(booking);
+        },
+        onClose: function () { btn.disabled = false; btn.textContent = "Confirm Booking"; UI.toast("Payment window closed.", "err"); }
+      });
+      handler.openIframe();
+      return;
+    }
+    if (method === "paystack") {
+      UI.toast("Paystack key not set — booking saved as 'pay after service'.");
+      booking.payment.method = "cash";
+    }
+    await finalize(booking);
+  } catch (e) {
+    console.error(e);
+    UI.toast(e.message || "Something went wrong.", "err");
+    btn.disabled = false; btn.textContent = "Confirm Booking";
+  }
+}
+
+async function finalize(booking) {
+  const id = await DB.createBooking(booking);
+  Mail.send(
+    booking.customer.name, booking.customer.email,
+    `Booking Confirmed — ${id}`,
+    `Hi ${booking.customer.name},\n\nYour ${booking.serviceName} is booked for ${UI.fmtDate(booking.date)} at ${booking.time}.\nAddress: ${booking.address.street}, ${booking.address.area}\nTotal: ${UI.money(booking.price.total)} (${booking.payment.status === "paid" ? "PAID" : "pay after service"})\n\nTrack it here: ${location.origin + location.pathname.replace("book.html", "confirmation.html")}?id=${id}\n\n— ${CONFIG.BUSINESS.name}`
+  );
+  location.href = "confirmation.html?id=" + id;
+}
+
+/* ---------- init ---------- */
+(async () => {
+  services = await DB.getServices();
+  document.getElementById("b-service").innerHTML = services.map(s => `<option value="${s.id}">${UI.esc(s.name)} — from ${UI.money(s.base)}</option>`).join("");
+  document.getElementById("b-freq").innerHTML = CONFIG.FREQUENCIES.map(f => `<option value="${f.id}">${f.label}</option>`).join("");
+  document.getElementById("b-area").innerHTML = Object.keys(CONFIG.AREAS).map(a => `<option>${a}</option>`).join("");
+  document.getElementById("b-slots").innerHTML = CONFIG.TIME_SLOTS.map(t => `<div class="slot" onclick="pickSlot(this)">${t}</div>`).join("");
+  document.getElementById("b-addons").innerHTML = CONFIG.ADDONS.map(a => `
+    <label class="check-pill" id="bpill-${a.id}"><input type="checkbox" value="${a.id}" onchange="toggleAddon(this)"> ${a.name} (+${UI.money(a.price)})</label>`).join("");
+
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const el = document.getElementById("b-date");
+  el.min = new Date().toISOString().split("T")[0];
+  el.value = d.toISOString().split("T")[0];
+  el.onchange = calc;
+
+  // prefill from calculator / services links
+  const p = k => UI.param(k);
+  if (p("service")) document.getElementById("b-service").value = p("service");
+  if (p("bed")) { state.bed = +p("bed"); document.getElementById("b-bed").textContent = state.bed; }
+  if (p("bath")) { state.bath = +p("bath"); document.getElementById("b-bath").textContent = state.bath; }
+  if (p("freq")) document.getElementById("b-freq").value = p("freq");
+  if (p("area")) document.getElementById("b-area").value = p("area");
+  if (p("addons")) p("addons").split(",").filter(Boolean).forEach(id => {
+    const cb = document.querySelector(`#bpill-${id} input`); if (cb) { cb.checked = true; toggleAddon(cb); }
+  });
+
+  document.getElementById("b-service").onchange = calc;
+  document.getElementById("b-freq").onchange = calc;
+  document.getElementById("b-area").onchange = calc;
+
+  Auth.onChange(u => {
+    if (u) {
+      document.getElementById("b-name").value ||= u.name;
+      document.getElementById("b-email").value ||= u.email;
+      document.getElementById("b-phone").value ||= u.phone || "";
+      document.getElementById("login-hint").innerHTML = `<i data-icon="check-circle"></i> Logged in as <b>${UI.esc(u.name)}</b> — this booking will appear in your dashboard.`;
+    }
+  });
+  go(1);
+})();
+
+function pickSlot(el) {
+  document.querySelectorAll(".slot").forEach(s => s.classList.remove("on"));
+  el.classList.add("on"); state.slot = el.textContent; calc();
+}
+function toggleAddon(cb) {
+  state.addons = state.addons.filter(x => x !== cb.value);
+  if (cb.checked) state.addons.push(cb.value);
+  document.getElementById("bpill-" + cb.value).classList.toggle("on", cb.checked);
+  calc();
+}
+</script>
+</body>
+</html>

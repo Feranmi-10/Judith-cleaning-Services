@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service Details — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="services">
+<div id="app-header"></div>
+
+<section class="section"><div class="container" id="svc-detail"><p class="muted">Loading…</p></div></section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+(async () => {
+  const s = await DB.getService(UI.param("id"));
+  const el = document.getElementById("svc-detail");
+  if (!s) { el.innerHTML = '<div class="empty"><div class="big"><i data-icon="search"></i></div>Service not found. <a href="services.html">Back to services</a></div>'; return; }
+  document.title = s.name + " — " + CONFIG.BUSINESS.name;
+  el.innerHTML = `
+  <div class="grid grid-2" style="align-items:start">
+    <div>
+      <div class="svc-ico" style="font-size:2.6rem;width:80px;height:80px">${UI.svcIcon(s.icon,30)}</div>
+      <h1 style="color:var(--navy);margin:16px 0 10px">${UI.esc(s.name)}</h1>
+      <p class="muted" style="font-size:1.05rem">${UI.esc(s.desc)}</p>
+      <h3 style="color:var(--navy);margin-top:26px">What's included</h3>
+      <ul class="feature-li">${(s.features || []).map(f => `<li>${UI.esc(f)}</li>`).join("")}</ul>
+    </div>
+    <div class="card">
+      <h3>Pricing</h3>
+      <div class="q-row" style="border-color:var(--line)"><span>Base price</span><b>${UI.money(s.base)}</b></div>
+      ${s.perBedroom ? `<div class="q-row" style="border-color:var(--line)"><span>Per bedroom / room</span><b>+ ${UI.money(s.perBedroom)}</b></div>` : ""}
+      ${s.perBathroom ? `<div class="q-row" style="border-color:var(--line)"><span>Per bathroom</span><b>+ ${UI.money(s.perBathroom)}</b></div>` : ""}
+      <div class="q-row" style="border-color:var(--line)"><span>Typical duration</span><b>${UI.esc(s.duration || "—")}</b></div>
+      <p class="muted" style="font-size:.85rem;margin-top:12px">Add-ons, travel fee and recurring-plan discounts are applied at checkout. Weekly plans save 15%.</p>
+      <a class="btn btn-primary btn-block" style="margin-top:16px" href="book.html?service=${s.id}">Book This Service</a>
+      <a class="btn btn-ghost btn-block" style="margin-top:10px" href="calculator.html?service=${s.id}">Calculate Exact Price</a>
+    </div>
+  </div>`;
+})();
+</script>
+</body>
+</html>

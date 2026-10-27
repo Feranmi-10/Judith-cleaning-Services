@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Dashboard — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="dashboard">
+<div id="app-header"></div>
+
+<div class="container dash">
+  <aside class="side">
+    <a class="cur" data-t="bookings" onclick="tab('bookings')"><i data-icon="clipboard"></i> My Bookings</a>
+    <a data-t="profile" onclick="tab('profile')"><i data-icon="user"></i> Profile</a>
+    <a href="book.html"><i data-icon="plus"></i> New Booking</a>
+    <a onclick="Auth.logout()"><i data-icon="logout"></i> Log Out</a>
+  </aside>
+
+  <main>
+    <div id="t-bookings">
+      <h2 style="color:var(--navy);margin-bottom:6px">My Bookings</h2>
+      <p class="muted" id="hello" style="margin-bottom:20px"></p>
+      <div class="stat-grid" id="my-stats"></div>
+      <div id="my-bookings"><p class="muted">Loading…</p></div>
+    </div>
+
+    <div id="t-profile" hidden>
+      <h2 style="color:var(--navy);margin-bottom:20px">My Profile</h2>
+      <div class="card" style="max-width:520px">
+        <label>Full name</label><input id="p-name">
+        <label>Phone</label><input id="p-phone">
+        <label>Email</label><input id="p-email" disabled>
+        <label>Default address</label><textarea id="p-address" rows="2"></textarea>
+        <button class="btn btn-primary" style="margin-top:18px" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+let me = null;
+
+function tab(t) {
+  document.querySelectorAll("[data-t]").forEach(a => a.classList.toggle("cur", a.dataset.t === t));
+  document.getElementById("t-bookings").hidden = t !== "bookings";
+  document.getElementById("t-profile").hidden = t !== "profile";
+}
+
+Auth.require(["customer", "admin", "cleaner"], async (p) => {
+  me = p;
+  document.getElementById("hello").textContent = `Welcome back, ${p.name}!`;
+  document.getElementById("p-name").value = p.name;
+  document.getElementById("p-phone").value = p.phone || "";
+  document.getElementById("p-email").value = p.email;
+  document.getElementById("p-address").value = p.address || "";
+  loadBookings();
+});
+
+async function loadBookings() {
+  let list = await DB.myBookings(me.id);
+  if (!list.length) list = await DB.myBookings(me.email);
+  const active = list.filter(b => !["completed", "cancelled"].includes(b.status));
+  const spent = list.filter(b => b.payment && b.payment.status === "paid").reduce((s, b) => s + b.price.total, 0);
+  document.getElementById("my-stats").innerHTML = `
+    <div class="stat"><span class="ico"><i data-icon="clipboard"></i></span><b>${list.length}</b><span>Total bookings</span></div>
+    <div class="stat"><span class="ico"><i data-icon="refresh"></i></span><b>${active.length}</b><span>Active</span></div>
+    <div class="stat"><span class="ico"><i data-icon="check-circle"></i></span><b>${list.filter(b => b.status === "completed").length}</b><span>Completed</span></div>
+    <div class="stat"><span class="ico"><i data-icon="credit-card"></i></span><b>${UI.money(spent)}</b><span>Paid online</span></div>`;
+
+  const el = document.getElementById("my-bookings");
+  if (!list.length) {
+    el.innerHTML = `<div class="card empty"><div class="big"><i data-icon="broom"></i></div>No bookings yet.<br><a class="btn btn-primary" style="margin-top:14px" href="book.html">Book Your First Cleaning</a></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Booking</th><th>Date</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${list.map(b => `
+      <tr>
+        <td><b>${UI.svcIcon(b.serviceIcon,15)} ${UI.esc(b.serviceName)}</b><br><span class="muted" style="font-size:.8rem">${b.id} · ${UI.esc(b.address.area)}</span></td>
+        <td>${UI.fmtDate(b.date)}<br><span class="muted" style="font-size:.8rem">${b.time}</span></td>
+        <td><b>${UI.money(b.price.total)}</b><br><span class="muted" style="font-size:.8rem">${b.payment.status === "paid" ? 'Paid <i data-icon="check-circle"></i>' : "Pay after"}</span></td>
+        <td>${UI.badge(b.status)}</td>
+        <td style="white-space:nowrap">
+          <a class="btn btn-ghost btn-sm" href="confirmation.html?id=${b.id}">Track</a>
+          ${!["completed", "cancelled"].includes(b.status) ? `
+            <button class="btn btn-sm" onclick="resched('${b.id}')"><i data-icon="calendar"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="cancelB('${b.id}')"><i data-icon="x" data-size="14"></i></button>` : ""}
+          ${b.status === "completed" ? `<a class="btn btn-gold btn-sm" href="book.html?service=${b.serviceId}">Re-book</a>` : ""}
+        </td>
+      </tr>`).join("")}</tbody></table></div>`;
+}
+
+async function cancelB(id) {
+  if (!confirm("Cancel this booking?")) return;
+  await DB.updateBooking(id, { status: "cancelled" });
+  UI.toast("Booking cancelled."); loadBookings();
+}
+async function resched(id) {
+  const d = prompt("New date (YYYY-MM-DD):");
+  if (!d) return;
+  const t = prompt("New time (e.g. 10:00 AM):", "10:00 AM");
+  if (!t) return;
+  await DB.updateBooking(id, { date: d, time: t, status: "pending" });
+  UI.toast("Booking rescheduled — pending re-confirmation."); loadBookings();
+}
+async function saveProfile() {
+  const patch = {
+    name: document.getElementById("p-name").value.trim(),
+    phone: document.getElementById("p-phone").value.trim(),
+    address: document.getElementById("p-address").value.trim()
+  };
+  await DB.updateUser(me.id, patch);
+  Object.assign(me, patch);
+  UI.toast("Profile saved");
+}
+</script>
+</body>
+</html>

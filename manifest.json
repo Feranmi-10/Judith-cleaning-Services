@@ -1,0 +1,12 @@
+{
+  "name": "Judith Cleaning Services",
+  "short_name": "Judith",
+  "description": "Book professional cleaning services in Lagos",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f6fafb",
+  "theme_color": "#1fa968",
+  "icons": [
+    { "src": "https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

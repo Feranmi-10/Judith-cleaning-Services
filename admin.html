@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin">
+<div id="app-header"></div>
+
+<div class="container dash">
+  <aside class="side">
+    <a class="cur" data-t="overview" onclick="tab('overview')"><i data-icon="chart"></i> Overview</a>
+    <a data-t="bookings" onclick="tab('bookings')"><i data-icon="clipboard"></i> Bookings</a>
+    <a data-t="services" onclick="tab('services')"><i data-icon="droplet"></i> Services</a>
+    <a data-t="team" onclick="tab('team')"><i data-icon="tool"></i> Cleaners</a>
+    <a data-t="customers" onclick="tab('customers')"><i data-icon="users"></i> Customers</a>
+    <a data-t="reviews" onclick="tab('reviews')"><i data-icon="star"></i> Reviews</a>
+    <a data-t="promos" onclick="tab('promos')"><i data-icon="tag"></i> Promo Codes</a>
+    <a data-t="messages" onclick="tab('messages')"><i data-icon="mail"></i> Messages</a>
+    <a data-t="gallery" onclick="tab('gallery')"><i data-icon="image"></i> Gallery</a>
+    <a onclick="Auth.logout()"><i data-icon="logout"></i> Log Out</a>
+  </aside>
+
+  <main>
+    <!-- OVERVIEW -->
+    <div class="t-pane" id="t-overview">
+      <h2 style="color:var(--navy);margin-bottom:20px">Business Overview</h2>
+      <div class="stat-grid" id="ov-stats"></div>
+      <div class="grid grid-2">
+        <div class="card"><h3>Revenue by Service</h3><div id="ov-services"></div></div>
+        <div class="card"><h3>Recent Bookings</h3><div id="ov-recent"></div></div>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div class="t-pane" id="t-bookings" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <h2 style="color:var(--navy)">Booking Management</h2>
+        <select id="bk-filter" onchange="renderBookings()" style="width:auto">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option><option value="confirmed">Confirmed</option>
+          <option value="assigned">Assigned</option><option value="on_the_way">On the way</option>
+          <option value="in_progress">In progress</option><option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div id="bk-list"></div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="t-pane" id="t-services" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <h2 style="color:var(--navy)">Services &amp; Pricing</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="seedSvcs()">Seed Defaults</button>
+          <button class="btn btn-primary btn-sm" onclick="editSvc()">+ New Service</button>
+        </div>
+      </div>
+      <div id="svc-list"></div>
+    </div>
+
+    <!-- CLEANERS -->
+    <div class="t-pane" id="t-team" hidden>
+      <h2 style="color:var(--navy);margin-bottom:6px">Cleaner Management</h2>
+      <p class="muted" style="margin-bottom:16px">Promote any registered user to cleaner. Cleaners sign in on the same login page and see the Cleaner Portal.</p>
+      <div id="team-list"></div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="t-pane" id="t-customers" hidden>
+      <h2 style="color:var(--navy);margin-bottom:16px">Customers</h2>
+      <div id="cust-list"></div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="t-pane" id="t-reviews" hidden>
+      <h2 style="color:var(--navy);margin-bottom:16px">Review Moderation</h2>
+      <div id="rev-list"></div>
+    </div>
+
+    <!-- PROMOS -->
+    <div class="t-pane" id="t-promos" hidden>
+      <h2 style="color:var(--navy);margin-bottom:16px">Promo Codes</h2>
+      <div class="card" style="margin-bottom:18px">
+        <div class="form-row">
+          <div><label>Code</label><input id="pr-code" placeholder="JUDITH10"></div>
+          <div><label>Type</label><select id="pr-type"><option value="percent">% off</option><option value="flat">₦ flat off</option></select></div>
+        </div>
+        <label>Value</label><input id="pr-value" type="number" placeholder="10">
+        <button class="btn btn-primary" style="margin-top:16px" onclick="savePromo()">Create Promo</button>
+      </div>
+      <div id="promo-list"></div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="t-pane" id="t-messages" hidden>
+      <h2 style="color:var(--navy);margin-bottom:16px">Contact Messages</h2>
+      <div id="msg-list"></div>
+    </div>
+
+    <!-- GALLERY -->
+    <div class="t-pane" id="t-gallery" hidden>
+      <h2 style="color:var(--navy);margin-bottom:16px">Before / After Gallery</h2>
+      <div class="card" style="margin-bottom:18px">
+        <div class="form-row">
+          <div><label>Before photo</label><input type="file" id="g-before" accept="image/*"></div>
+          <div><label>After photo</label><input type="file" id="g-after" accept="image/*"></div>
+        </div>
+        <label>Caption</label><input id="g-caption" placeholder="Deep Kitchen Clean — Lekki">
+        <button class="btn btn-primary" style="margin-top:16px" id="g-go" onclick="addGallery()">Upload Pair</button>
+      </div>
+      <div class="grid grid-2" id="gal-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- service modal -->
+<div class="modal-bg" id="svc-modal" hidden>
+  <div class="modal">
+    <h3 style="color:var(--navy)" id="sm-title">Edit Service</h3>
+    <input type="hidden" id="sm-id">
+    <div class="form-row">
+      <div><label>Name</label><input id="sm-name"></div>
+      <div><label>Icon name</label><input id="sm-icon" placeholder="broom" title="broom, sparkles, box, building, tool, sofa, layers, bug, droplet"></div>
+    </div>
+    <label>Description</label><textarea id="sm-desc" rows="2"></textarea>
+    <div class="form-row">
+      <div><label>Base price (₦)</label><input id="sm-base" type="number"></div>
+      <div><label>Duration</label><input id="sm-duration" placeholder="2–4 hrs"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Per bedroom (₦)</label><input id="sm-bed" type="number"></div>
+      <div><label>Per bathroom (₦)</label><input id="sm-bath" type="number"></div>
+    </div>
+    <label>Features (one per line)</label><textarea id="sm-features" rows="3"></textarea>
+    <label class="check-pill" style="margin-top:12px"><input type="checkbox" id="sm-popular"> Mark as Popular</label>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-ghost" onclick="document.getElementById('svc-modal').hidden=true">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveSvc()">Save Service</button>
+    </div>
+  </div>
+</div>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+let bookings = [], users = [], cleaners = [];
+
+function tab(t) {
+  document.querySelectorAll("[data-t]").forEach(a => a.classList.toggle("cur", a.dataset.t === t));
+  document.querySelectorAll(".t-pane").forEach(p => p.hidden = p.id !== "t-" + t);
+  const loaders = { overview: loadOverview, bookings: loadBookings, services: loadServices, team: loadUsers,
+    customers: loadUsers, reviews: loadReviews, promos: loadPromos, messages: loadMessages, gallery: loadGallery };
+  loaders[t] && loaders[t]();
+}
+
+Auth.require(["admin"], () => { loadOverview(); });
+
+/* ---------- OVERVIEW ---------- */
+async function loadOverview() {
+  bookings = await DB.allBookings();
+  const today = new Date().toISOString().split("T")[0];
+  const revenue = bookings.filter(b => b.payment && b.payment.status === "paid").reduce((s, b) => s + b.price.total, 0);
+  const pendingPay = bookings.filter(b => b.payment && b.payment.status !== "paid" && b.status !== "cancelled").reduce((s, b) => s + b.price.total, 0);
+  document.getElementById("ov-stats").innerHTML = `
+    <div class="stat"><span class="ico"><i data-icon="clipboard"></i></span><b>${bookings.length}</b><span>Total bookings</span></div>
+    <div class="stat"><span class="ico"><i data-icon="calendar"></i></span><b>${bookings.filter(b => b.date === today && b.status !== "cancelled").length}</b><span>Bookings today</span></div>
+    <div class="stat"><span class="ico"><i data-icon="clock"></i></span><b>${bookings.filter(b => b.status === "pending").length}</b><span>Awaiting confirmation</span></div>
+    <div class="stat"><span class="ico"><i data-icon="wallet"></i></span><b>${UI.money(revenue)}</b><span>Paid revenue</span></div>
+    <div class="stat"><span class="ico"><i data-icon="file-text"></i></span><b>${UI.money(pendingPay)}</b><span>Pending payments</span></div>
+    <div class="stat"><span class="ico"><i data-icon="check-circle"></i></span><b>${bookings.filter(b => b.status === "completed").length}</b><span>Completed jobs</span></div>`;
+
+  const byService = {};
+  bookings.filter(b => b.status !== "cancelled").forEach(b => {
+    byService[b.serviceName] = (byService[b.serviceName] || 0) + b.price.total;
+  });
+  const max = Math.max(1, ...Object.values(byService));
+  document.getElementById("ov-services").innerHTML = Object.entries(byService).sort((a, b) => b[1] - a[1]).map(([n, v]) => `
+    <div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:.88rem"><span>${UI.esc(n)}</span><b>${UI.money(v)}</b></div>
+    <div style="height:9px;background:var(--line);border-radius:9px;margin-top:4px"><div style="height:9px;width:${Math.round(v / max * 100)}%;background:linear-gradient(90deg,var(--teal),#46c98a);border-radius:9px"></div></div></div>`).join("")
+    || '<p class="muted">No bookings yet.</p>';
+
+  document.getElementById("ov-recent").innerHTML = bookings.slice(0, 6).map(b => `
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.88rem">
+      <span>${UI.svcIcon(b.serviceIcon,15)} <b>${UI.esc(b.customer.name)}</b> · ${UI.fmtDate(b.date)}</span>${UI.badge(b.status)}
+    </div>`).join("") || '<p class="muted">No bookings yet.</p>';
+}
+
+/* ---------- BOOKINGS ---------- */
+async function loadBookings() {
+  bookings = await DB.allBookings();
+  cleaners = await DB.listUsers("cleaner");
+  renderBookings();
+}
+function renderBookings() {
+  const f = document.getElementById("bk-filter").value;
+  const list = f ? bookings.filter(b => b.status === f) : bookings;
+  document.getElementById("bk-list").innerHTML = list.length ? `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Booking</th><th>Customer</th><th>Schedule</th><th>Total</th><th>Cleaner</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${list.map(b => `<tr>
+      <td><b>${UI.svcIcon(b.serviceIcon,15)} ${UI.esc(b.serviceName)}</b><br><span class="muted" style="font-size:.78rem">${b.id}</span></td>
+      <td>${UI.esc(b.customer.name)}<br><span class="muted" style="font-size:.78rem">${UI.esc(b.customer.phone)}</span></td>
+      <td>${UI.fmtDate(b.date)}<br><span class="muted" style="font-size:.78rem">${b.time} · ${UI.esc(b.address.area)}</span></td>
+      <td><b>${UI.money(b.price.total)}</b><br><span class="muted" style="font-size:.78rem">${b.payment.status === "paid" ? 'Paid <i data-icon="check-circle"></i>' : "Unpaid"}</span></td>
+      <td>${b.cleanerName ? UI.esc(b.cleanerName) : `<select onchange="assign('${b.id}',this.value)" style="padding:6px;font-size:.8rem"><option value="">Assign…</option>${cleaners.map(c => `<option value="${c.id}">${UI.esc(c.name)}${c.available === false ? " (unavailable)" : ""}</option>`).join("")}</select>`}</td>
+      <td>${UI.badge(b.status)}</td>
+      <td style="white-space:nowrap">
+        <select onchange="setBkStatus('${b.id}',this.value)" style="padding:6px;font-size:.8rem;width:auto">
+          <option value="">Status…</option>
+          ${Object.keys(UI.STATUS).map(s => `<option value="${s}">${UI.STATUS[s].label}</option>`).join("")}
+        </select>
+        ${b.payment.status !== "paid" ? `<button class="btn btn-sm" title="Mark paid" onclick="markPaid('${b.id}')"><i data-icon="credit-card"></i></button>` : ""}
+        <a class="btn btn-ghost btn-sm" href="confirmation.html?id=${b.id}" title="View"><i data-icon="eye"></i></a>
+      </td></tr>`).join("")}</tbody></table></div>`
+    : '<div class="card empty"><div class="big"><i data-icon="inbox"></i></div>No bookings match.</div>';
+}
+async function assign(id, cleanerId) {
+  if (!cleanerId) return;
+  const c = cleaners.find(x => x.id === cleanerId);
+  await DB.updateBooking(id, { cleanerId, cleanerName: c.name, status: "assigned" });
+  const b = bookings.find(x => x.id === id);
+  if (b) {
+    Mail.send(b.customer.name, b.customer.email, "A cleaner has been assigned!",
+      `Hi ${b.customer.name},\n\n${c.name} has been assigned to your ${b.serviceName} on ${UI.fmtDate(b.date)} at ${b.time}.\n\n— ${CONFIG.BUSINESS.name}`);
+    if (c.email) Mail.send(c.name, c.email, "New job assigned to you",
+      `Hi ${c.name},\n\nYou have a new job: ${b.serviceName} on ${UI.fmtDate(b.date)} at ${b.time}, ${b.address.street}, ${b.address.area}.\nCustomer: ${b.customer.name} (${b.customer.phone}).\n\n— ${CONFIG.BUSINESS.name}`);
+  }
+  UI.toast("Cleaner assigned"); loadBookings();
+}
+async function setBkStatus(id, status) {
+  if (!status) return;
+  await DB.updateBooking(id, { status });
+  const b = bookings.find(x => x.id === id);
+  if (b) Mail.send(b.customer.name, b.customer.email, `Booking update — ${UI.STATUS[status].label}`,
+    `Hi ${b.customer.name},\n\nYour booking ${id} is now: ${UI.STATUS[status].label}.\n\n— ${CONFIG.BUSINESS.name}`);
+  UI.toast("Status updated."); loadBookings();
+}
+async function markPaid(id) {
+  await DB.updateBooking(id, { payment: { ...bookings.find(x => x.id === id).payment, status: "paid" } });
+  UI.toast("Marked as paid."); loadBookings();
+}
+
+/* ---------- SERVICES ---------- */
+async function loadServices() {
+  const list = await DB.getServices();
+  document.getElementById("svc-list").innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Service</th><th>Base</th><th>Per Bed</th><th>Per Bath</th><th></th></tr></thead>
+    <tbody>${list.map(s => `<tr>
+      <td><b>${UI.svcIcon(s.icon,15)} ${UI.esc(s.name)}</b>${s.popular ? ' <span class="pop-tag" style="position:static">POPULAR</span>' : ""}</td>
+      <td>${UI.money(s.base)}</td><td>${UI.money(s.perBedroom)}</td><td>${UI.money(s.perBathroom)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick='editSvc(${JSON.stringify(s).replace(/'/g, "&#39;")})'>Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="delSvc('${s.id}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`;
+}
+function editSvc(s) {
+  s = s || {};
+  document.getElementById("sm-title").textContent = s.id ? "Edit Service" : "New Service";
+  document.getElementById("sm-id").value = s.id || "";
+  document.getElementById("sm-name").value = s.name || "";
+  document.getElementById("sm-icon").value = s.icon || "";
+  document.getElementById("sm-desc").value = s.desc || "";
+  document.getElementById("sm-base").value = s.base || "";
+  document.getElementById("sm-duration").value = s.duration || "";
+  document.getElementById("sm-bed").value = s.perBedroom || 0;
+  document.getElementById("sm-bath").value = s.perBathroom || 0;
+  document.getElementById("sm-features").value = (s.features || []).join("\n");
+  document.getElementById("sm-popular").checked = !!s.popular;
+  document.getElementById("svc-modal").hidden = false;
+}
+async function saveSvc() {
+  const s = {
+    id: document.getElementById("sm-id").value || undefined,
+    name: document.getElementById("sm-name").value.trim(),
+    icon: document.getElementById("sm-icon").value.trim() || "droplet",
+    desc: document.getElementById("sm-desc").value.trim(),
+    base: +document.getElementById("sm-base").value || 0,
+    duration: document.getElementById("sm-duration").value.trim(),
+    perBedroom: +document.getElementById("sm-bed").value || 0,
+    perBathroom: +document.getElementById("sm-bath").value || 0,
+    features: document.getElementById("sm-features").value.split("\n").map(x => x.trim()).filter(Boolean),
+    popular: document.getElementById("sm-popular").checked
+  };
+  if (!s.name) return UI.toast("Service needs a name.", "err");
+  await DB.saveService(s);
+  document.getElementById("svc-modal").hidden = true;
+  UI.toast("Service saved"); loadServices();
+}
+async function delSvc(id) { if (confirm("Delete this service?")) { await DB.deleteService(id); loadServices(); } }
+async function seedSvcs() { await DB.seedServices(); UI.toast("Default services saved to database"); loadServices(); }
+
+/* ---------- USERS ---------- */
+async function loadUsers() {
+  users = await DB.listUsers();
+  const team = users.filter(u => u.role === "cleaner");
+  const custs = users.filter(u => u.role === "customer");
+  document.getElementById("team-list").innerHTML = (team.length ? userTable(team, true) : '<div class="card empty"><div class="big"><i data-icon="tool"></i></div>No cleaners yet. Promote a registered user below.</div>')
+    + '<h3 style="margin:26px 0 12px;color:var(--navy)">All users — promote to cleaner</h3>' + userTable(users, true);
+  document.getElementById("cust-list").innerHTML = custs.length ? userTable(custs, false) : '<div class="card empty"><div class="big"><i data-icon="users"></i></div>No registered customers yet.</div>';
+}
+function userTable(list, withRole) {
+  return `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th>${withRole ? "<th>Change Role</th>" : ""}</tr></thead>
+    <tbody>${list.map(u => `<tr>
+      <td><b>${UI.esc(u.name)}</b>${u.role === "cleaner" ? (u.available === false ? ' <span class="badge s-cancel">unavailable</span>' : ' <span class="badge s-done">available</span>') : ""}</td>
+      <td>${UI.esc(u.email)}</td><td>${UI.esc(u.phone || "—")}</td>
+      <td><span class="badge">${u.role}</span></td>
+      ${withRole ? `<td><select onchange="setRole('${u.id}',this.value)" style="padding:6px;font-size:.8rem;width:auto">
+        <option value="">Change…</option><option value="customer">customer</option><option value="cleaner">cleaner</option><option value="admin">admin</option>
+      </select></td>` : ""}</tr>`).join("")}</tbody></table></div>`;
+}
+async function setRole(id, role) {
+  if (!role) return;
+  await DB.updateUser(id, { role });
+  UI.toast("Role updated"); loadUsers();
+}
+
+/* ---------- REVIEWS ---------- */
+async function loadReviews() {
+  const list = await DB.getReviews(false);
+  document.getElementById("rev-list").innerHTML = list.length ? list.map(r => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <b>${UI.esc(r.name)} <span class="stars" style="color:#f5a623">${UI.stars(r.rating)}</span></b>
+        <span>${r.approved ? '<span class="badge s-done">Approved</span>' : '<span class="badge s-pending">Pending</span>'}</span>
+      </div>
+      <p class="muted" style="margin:8px 0;font-size:.92rem">"${UI.esc(r.text)}" ${r.serviceName ? "— <i>" + UI.esc(r.serviceName) + "</i>" : ""}</p>
+      <div style="display:flex;gap:8px">
+        ${!r.approved ? `<button class="btn btn-primary btn-sm" onclick="apprRev('${r.id}',true)">Approve</button>` : `<button class="btn btn-ghost btn-sm" onclick="apprRev('${r.id}',false)">Unpublish</button>`}
+        <button class="btn btn-danger btn-sm" onclick="delRev('${r.id}')">Delete</button>
+      </div>
+    </div>`).join("") : '<div class="card empty"><div class="big"><i data-icon="star"></i></div>No reviews yet.</div>';
+}
+async function apprRev(id, v) { await DB.updateReview(id, { approved: v }); loadReviews(); }
+async function delRev(id) { if (confirm("Delete review?")) { await DB.deleteReview(id); loadReviews(); } }
+
+/* ---------- PROMOS ---------- */
+async function loadPromos() {
+  const list = await DB.listPromos();
+  document.getElementById("promo-list").innerHTML = list.length ? `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Code</th><th>Discount</th><th>Status</th><th></th></tr></thead>
+    <tbody>${list.map(p => `<tr><td><b>${p.code}</b></td>
+      <td>${p.type === "percent" ? p.value + "% off" : UI.money(p.value) + " off"}</td>
+      <td>${p.active ? '<span class="badge s-done">Active</span>' : '<span class="badge s-cancel">Inactive</span>'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="togglePromo('${p.id}',${!p.active})">${p.active ? "Deactivate" : "Activate"}</button>
+      <button class="btn btn-danger btn-sm" onclick="delPromo('${p.id}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`
+    : '<div class="card empty"><div class="big"><i data-icon="tag"></i></div>No promo codes yet.</div>';
+}
+async function savePromo() {
+  const code = document.getElementById("pr-code").value.trim();
+  const value = +document.getElementById("pr-value").value;
+  if (!code || !value) return UI.toast("Enter a code and value.", "err");
+  await DB.savePromo({ code, type: document.getElementById("pr-type").value, value, active: true });
+  document.getElementById("pr-code").value = ""; document.getElementById("pr-value").value = "";
+  UI.toast("Promo created"); loadPromos();
+}
+async function togglePromo(id, v) { await DB.savePromo({ id, ...(await DB.listPromos()).find(p => p.id === id), active: v }); loadPromos(); }
+async function delPromo(id) { await DB.deletePromo(id); loadPromos(); }
+
+/* ---------- MESSAGES ---------- */
+async function loadMessages() {
+  const list = await DB.listMessages();
+  document.getElementById("msg-list").innerHTML = list.length ? list.map(mg => `
+    <div class="card" style="margin-bottom:12px;${mg.read ? "" : "border-left:4px solid var(--teal)"}">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <b>${UI.esc(mg.name)}</b><span class="muted" style="font-size:.8rem">${new Date(mg.createdAt).toLocaleString()}</span>
+      </div>
+      <p class="muted" style="font-size:.85rem">${UI.esc(mg.email)} · ${UI.esc(mg.phone || "")}</p>
+      <p style="margin:8px 0">${UI.esc(mg.message)}</p>
+      <div style="display:flex;gap:8px">
+        <a class="btn btn-primary btn-sm" href="mailto:${mg.email}">Reply by Email</a>
+        ${mg.phone ? `<a class="btn btn-ghost btn-sm" target="_blank" href="https://wa.me/${mg.phone.replace(/\D/g, "")}">WhatsApp</a>` : ""}
+        ${!mg.read ? `<button class="btn btn-sm" onclick="markRead('${mg.id}')">Mark Read</button>` : ""}
+      </div>
+    </div>`).join("") : '<div class="card empty"><div class="big"><i data-icon="mail"></i></div>No messages yet.</div>';
+}
+async function markRead(id) { await DB.updateMessage(id, { read: true }); loadMessages(); }
+
+/* ---------- GALLERY ---------- */
+async function loadGallery() {
+  const list = await DB.listGallery();
+  document.getElementById("gal-list").innerHTML = list.map(g => `
+    <div class="ba-card"><div class="ba-imgs">
+      <div><span class="ba-tag">BEFORE</span><img src="${g.before}"></div>
+      <div><span class="ba-tag after">AFTER</span><img src="${g.after}"></div>
+    </div><div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+      <b>${UI.esc(g.caption)}</b><button class="btn btn-danger btn-sm" onclick="delGal('${g.id}')">Delete</button>
+    </div></div>`).join("") || '<p class="muted">No gallery items yet — the public gallery shows the built-in samples until you add some.</p>';
+}
+async function addGallery() {
+  const bf = document.getElementById("g-before").files[0];
+  const af = document.getElementById("g-after").files[0];
+  if (!bf || !af) return UI.toast("Choose both before and after photos.", "err");
+  const btn = document.getElementById("g-go"); btn.disabled = true; btn.textContent = "Uploading…";
+  try {
+    const [before, after] = [await Cloud.upload(bf), await Cloud.upload(af)];
+    await DB.addGallery({ before, after, caption: document.getElementById("g-caption").value.trim() || "Cleaning job" });
+    UI.toast("Gallery pair added"); loadGallery();
+  } catch (e) { UI.toast("Upload failed: " + e.message, "err"); }
+  btn.disabled = false; btn.textContent = "Upload Pair";
+}
+async function delGal(id) { await DB.deleteGallery(id); loadGallery(); }
+</script>
+</body>
+</html>

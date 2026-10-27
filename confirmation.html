@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Confirmation — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="confirmation">
+<div id="app-header"></div>
+
+<section class="section"><div class="container" style="max-width:860px" id="conf"><p class="muted">Loading booking…</p></div></section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+const STEPS = ["pending","confirmed","assigned","on_the_way","in_progress","completed"];
+const id = UI.param("id");
+
+function render(b) {
+  const el = document.getElementById("conf");
+  if (!b) { el.innerHTML = '<div class="empty"><div class="big"><i data-icon="search"></i></div>Booking not found.</div>'; return; }
+  const curStep = UI.STATUS[b.status] ? UI.STATUS[b.status].step : 0;
+  const cancelled = b.status === "cancelled";
+  el.innerHTML = `
+  <div class="center" style="margin-bottom:30px">
+    <div style="color:var(--teal-d);margin-bottom:6px">${cancelled ? UI.icon("x-circle",54) : b.status === "completed" ? UI.icon("sparkles",54) : UI.icon("check-circle",54)}</div>
+    <h2 style="color:var(--navy)">${cancelled ? "Booking Cancelled" : b.status === "completed" ? "Cleaning Completed!" : "Booking " + (b.status === "pending" ? "Received!" : "Confirmed!")}</h2>
+    <p class="muted">Booking ID: <b>${b.id}</b> · ${UI.badge(b.status)}</p>
+  </div>
+  <div class="grid grid-2" style="align-items:start">
+    <div class="card">
+      <h3>Booking Details</h3>
+      <div class="q-row" style="border-color:var(--line)"><span>Service</span><b>${UI.svcIcon(b.serviceIcon,15)} ${UI.esc(b.serviceName)}</b></div>
+      <div class="q-row" style="border-color:var(--line)"><span>Date &amp; time</span><b>${UI.fmtDate(b.date)}, ${b.time}</b></div>
+      <div class="q-row" style="border-color:var(--line)"><span>Address</span><b>${UI.esc(b.address.street)}, ${UI.esc(b.address.area)}</b></div>
+      <div class="q-row" style="border-color:var(--line)"><span>Rooms</span><b>${b.details.bedrooms} bed · ${b.details.bathrooms} bath</b></div>
+      <div class="q-row" style="border-color:var(--line)"><span>Cleaner</span><b>${UI.esc(b.cleanerName || "Being assigned…")}</b></div>
+      <div class="q-row" style="border-color:var(--line)"><span>Payment</span><b>${b.payment.status === "paid" ? '<i data-icon="check-circle"></i> Paid (' + (b.payment.ref || "online") + ')' : '<i data-icon="wallet"></i> Pay after service'}</b></div>
+      <div class="q-row total" style="color:var(--teal-d)"><span>Total</span><span>${UI.money(b.price.total)}</span></div>
+      <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="window.print()"><i data-icon="file-text"></i> Print Invoice / Receipt</button>
+      ${!cancelled && b.status !== "completed" ? `<button class="btn btn-danger btn-block" style="margin-top:10px" onclick="cancelBooking()">Cancel Booking</button>` : ""}
+    </div>
+    <div class="card">
+      <h3>Live Status Tracking</h3>
+      <ul class="timeline">
+        ${STEPS.map((s, i) => `
+          <li class="${cancelled ? "" : i < curStep ? "done" : i === curStep ? "cur" : ""}">
+            <span class="dot"></span>${UI.STATUS[s].label}
+          </li>`).join("")}
+      </ul>
+      ${b.photos && (b.photos.before.length || b.photos.after.length) ? `
+        <h3 style="margin-top:8px">Photo Verification</h3>
+        ${b.photos.before.length ? `<p class="muted" style="font-size:.85rem">Before:</p><div class="photo-grid">${b.photos.before.map(u => `<img src="${u}">`).join("")}</div>` : ""}
+        ${b.photos.after.length ? `<p class="muted" style="font-size:.85rem;margin-top:8px">After:</p><div class="photo-grid">${b.photos.after.map(u => `<img src="${u}">`).join("")}</div>` : ""}` : ""}
+      ${b.status === "completed" ? `
+        <div style="margin-top:16px;background:var(--bg);padding:16px;border-radius:12px">
+          <b>How was your cleaning?</b>
+          <div id="rate-stars" style="cursor:pointer;margin:6px 0">${[1,2,3,4,5].map(n => `<span data-n="${n}" onclick="setRate(${n})">${UI.star(false, 26)}</span>`).join("")}</div>
+          <textarea id="rate-text" rows="2" placeholder="Tell others about your experience…"></textarea>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="sendReview()">Submit Review</button>
+        </div>` : ""}
+    </div>
+  </div>
+  <p class="center muted" style="margin-top:24px;font-size:.9rem">This page updates automatically as your booking progresses.
+  Questions? <a href="https://wa.me/${CONFIG.BUSINESS.whatsapp}" target="_blank">Chat with us on WhatsApp</a>.</p>`;
+}
+
+let booking = null, rating = 0;
+DB.watchBooking(id, b => { booking = b; render(b); });
+
+async function cancelBooking() {
+  if (!confirm("Cancel this booking?")) return;
+  await DB.updateBooking(id, { status: "cancelled" });
+  if (!FB.on) { booking.status = "cancelled"; render(booking); }
+  UI.toast("Booking cancelled.");
+}
+function setRate(n) {
+  rating = n;
+  document.querySelectorAll("#rate-stars span").forEach(s => s.innerHTML = UI.star(+s.dataset.n <= n, 26));
+}
+async function sendReview() {
+  if (!rating) return UI.toast("Please tap a star rating first.", "err");
+  await DB.addReview({ name: booking.customer.name, rating, text: document.getElementById("rate-text").value.trim(), serviceName: booking.serviceName, bookingId: booking.id });
+  UI.toast("Thank you! Your review is pending approval.");
+}
+</script>
+</body>
+</html>

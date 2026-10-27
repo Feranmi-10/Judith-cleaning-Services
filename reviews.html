@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviews — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="reviews">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head">
+      <span class="kicker">Customer Reviews</span>
+      <h2 id="rev-head">What Our Customers Say</h2>
+    </div>
+    <div class="grid grid-3" id="rev-grid"></div>
+
+    <div class="card" style="max-width:560px;margin:44px auto 0">
+      <h3>Leave a Review</h3>
+      <p class="muted" style="font-size:.88rem">Had a cleaning with us? Tell others how it went. Reviews appear after a quick approval.</p>
+      <label>Your name</label><input id="rv-name" placeholder="e.g. Adaeze O.">
+      <label>Rating</label>
+      <div id="rv-stars" style="cursor:pointer">
+        <span data-n="1"></span><span data-n="2"></span><span data-n="3"></span><span data-n="4"></span><span data-n="5"></span>
+      </div>
+      <label>Your review</label><textarea id="rv-text" rows="3" placeholder="How was your experience?"></textarea>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="submitReview()">Submit Review</button>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+const FALLBACK = [
+  { name: "Adaeze O.", rating: 5, text: "My apartment in Lekki has never looked this good. The before/after photos were a lovely touch!", serviceName: "Deep Cleaning" },
+  { name: "Tunde B.", rating: 5, text: "Booked online in under a minute. Transparent pricing and a spotless result.", serviceName: "Standard Home Cleaning" },
+  { name: "Mrs. Okafor", rating: 4, text: "We use the weekly plan for our Ikeja office. Reliable and great value.", serviceName: "Office Cleaning" },
+  { name: "Chinedu E.", rating: 5, text: "Post-construction cleanup after our renovation was flawless. Highly recommend.", serviceName: "Post-Construction" },
+  { name: "Funmi A.", rating: 5, text: "The cleaner arrived on time, was polite and professional. The fumigation worked perfectly.", serviceName: "Fumigation" },
+  { name: "David K.", rating: 4, text: "Sofa looks brand new after the upholstery cleaning. Will book again.", serviceName: "Sofa & Upholstery" }
+];
+let rating = 0;
+
+(async () => {
+  let list = await DB.getReviews(true);
+  if (!list.length) list = FALLBACK;
+  const avg = (list.reduce((s, r) => s + r.rating, 0) / list.length).toFixed(1);
+  document.getElementById("rev-head").innerHTML = `Rated <span style="color:#f5a623">${avg} ${UI.star(true, 22)}</span> by ${list.length} customers`;
+  document.getElementById("rev-grid").innerHTML = list.map(r => `
+    <div class="card review-card">
+      <div class="stars">${UI.stars(r.rating)}</div>
+      <p class="muted" style="margin:10px 0;font-size:.93rem">"${UI.esc(r.text)}"</p>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="avatar">${UI.esc((r.name || "A")[0])}</div>
+        <div><b>${UI.esc(r.name)}</b>${r.serviceName ? `<br><span class="muted" style="font-size:.78rem">${UI.esc(r.serviceName)}</span>` : ""}</div>
+      </div>
+    </div>`).join("");
+})();
+
+function paintStars() {
+  document.querySelectorAll("#rv-stars span").forEach(x => x.innerHTML = UI.star(+x.dataset.n <= rating, 28));
+}
+document.querySelectorAll("#rv-stars span").forEach(s => s.onclick = () => { rating = +s.dataset.n; paintStars(); });
+paintStars();
+async function submitReview() {
+  const name = document.getElementById("rv-name").value.trim();
+  const text = document.getElementById("rv-text").value.trim();
+  if (!name || !text || !rating) return UI.toast("Please add your name, rating and review.", "err");
+  await DB.addReview({ name, rating, text });
+  UI.toast("Thank you! Your review is pending approval.");
+  document.getElementById("rv-name").value = ""; document.getElementById("rv-text").value = "";
+}
+</script>
+</body>
+</html>

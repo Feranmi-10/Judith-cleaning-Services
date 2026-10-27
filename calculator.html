@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Price Calculator — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="calculator">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head">
+      <span class="kicker">Instant Quote</span>
+      <h2>Price Calculator</h2>
+      <p class="muted">Your exact price in real time — the same price you'll pay at booking.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:1.5fr 1fr;align-items:start">
+      <div class="card">
+        <label>1. Which service do you need?</label>
+        <select id="c-service"></select>
+
+        <div class="form-row">
+          <div><label>2. Bedrooms / rooms</label>
+            <div class="counter"><button onclick="bump('bed',-1)">−</button><b id="c-bed">2</b><button onclick="bump('bed',1)">+</button></div></div>
+          <div><label>Bathrooms</label>
+            <div class="counter"><button onclick="bump('bath',-1)">−</button><b id="c-bath">1</b><button onclick="bump('bath',1)">+</button></div></div>
+        </div>
+
+        <label>3. Add-ons (optional)</label>
+        <div class="pill-wrap" id="c-addons"></div>
+
+        <div class="form-row">
+          <div><label>4. How often?</label><select id="c-freq"></select></div>
+          <div><label>Your area (service-area check)</label><select id="c-area"></select></div>
+        </div>
+        <p id="area-note" class="muted" style="font-size:.85rem;margin-top:8px"></p>
+      </div>
+
+      <div class="quote-box">
+        <h3>Your Estimate</h3>
+        <div id="q-body"></div>
+        <a id="q-book" href="book.html" class="btn btn-gold btn-block" style="margin-top:18px">Book at This Price →</a>
+        <p style="font-size:.78rem;color:#9fc4cd;margin-top:12px">Price is confirmed at booking. Promo codes can be applied at checkout.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+let services = [], state = { bed: 2, bath: 1, addons: [] };
+
+function bump(k, d) {
+  state[k] = Math.max(0, Math.min(12, state[k] + d));
+  document.getElementById("c-" + k).textContent = state[k];
+  calc();
+}
+
+function calc() {
+  const svc = services.find(s => s.id === document.getElementById("c-service").value);
+  const area = document.getElementById("c-area").value;
+  const freq = document.getElementById("c-freq").value;
+  const q = DB.quote({ service: svc, bedrooms: state.bed, bathrooms: state.bath, addons: state.addons, frequency: freq, area });
+  document.getElementById("q-body").innerHTML = `
+    <div class="q-row"><span>${UI.esc(svc.name)}</span><span>${UI.money(q.subtotal - q.addonTotal)}</span></div>
+    <div class="q-row"><span>Add-ons</span><span>${UI.money(q.addonTotal)}</span></div>
+    <div class="q-row"><span>Travel fee (${UI.esc(area)})</span><span>${UI.money(q.travelFee)}</span></div>
+    <div class="q-row"><span>Plan discount</span><span class="neg">− ${UI.money(q.discount)}</span></div>
+    <div class="q-row total"><span>Total</span><span>${UI.money(q.total)}</span></div>`;
+  document.getElementById("area-note").textContent = area in CONFIG.AREAS
+    ? `<i data-icon="check-circle"></i> Great news — we cover ${area}! Travel fee: ${q.travelFee ? UI.money(q.travelFee) : "free"}.`
+    : "";
+  document.getElementById("q-book").href =
+    `book.html?service=${svc.id}&bed=${state.bed}&bath=${state.bath}&freq=${freq}&area=${encodeURIComponent(area)}&addons=${state.addons.join(",")}`;
+}
+
+(async () => {
+  services = await DB.getServices();
+  const sSel = document.getElementById("c-service");
+  sSel.innerHTML = services.map(s => `<option value="${s.id}">${UI.esc(s.name)} — from ${UI.money(s.base)}</option>`).join("");
+  const pre = UI.param("service"); if (pre) sSel.value = pre;
+  document.getElementById("c-freq").innerHTML = CONFIG.FREQUENCIES.map(f => `<option value="${f.id}">${f.label}</option>`).join("");
+  document.getElementById("c-area").innerHTML = Object.keys(CONFIG.AREAS).map(a => `<option>${a}</option>`).join("");
+  document.getElementById("c-addons").innerHTML = CONFIG.ADDONS.map(a => `
+    <label class="check-pill" id="pill-${a.id}">
+      <input type="checkbox" value="${a.id}" onchange="toggleAddon(this)"> ${a.name} (+${UI.money(a.price)})
+    </label>`).join("");
+  sSel.onchange = calc;
+  document.getElementById("c-freq").onchange = calc;
+  document.getElementById("c-area").onchange = calc;
+  calc();
+})();
+
+function toggleAddon(cb) {
+  state.addons = state.addons.filter(x => x !== cb.value);
+  if (cb.checked) state.addons.push(cb.value);
+  document.getElementById("pill-" + cb.value).classList.toggle("on", cb.checked);
+  calc();
+}
+</script>
+</body>
+</html>

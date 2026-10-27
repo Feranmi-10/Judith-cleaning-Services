@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="contact">
+<div id="app-header"></div>
+
+<section class="section">
+  <div class="container">
+    <div class="sec-head"><span class="kicker">Get in Touch</span><h2>Contact Us</h2></div>
+    <div class="grid grid-2" style="align-items:start">
+      <div>
+        <div class="card" style="margin-bottom:16px"><h3><i data-icon="phone"></i> Call or WhatsApp</h3>
+          <p class="muted">We respond within minutes during working hours.</p>
+          <p style="margin-top:8px"><b id="c-phone"></b></p>
+          <a class="btn btn-primary btn-sm" style="margin-top:10px" id="c-wa" target="_blank">Chat on WhatsApp</a>
+        </div>
+        <div class="card" style="margin-bottom:16px"><h3><i data-icon="mail"></i> Email</h3><p><b id="c-email"></b></p></div>
+        <div class="card"><h3><i data-icon="pin"></i> Office</h3><p id="c-addr" class="muted"></p><p class="muted" id="c-hours"></p></div>
+      </div>
+      <div class="card">
+        <h3>Send a Message</h3>
+        <label>Your name</label><input id="m-name">
+        <label>Email</label><input id="m-email" type="email">
+        <label>Phone (optional)</label><input id="m-phone">
+        <label>Message</label><textarea id="m-text" rows="5" placeholder="How can we help?"></textarea>
+        <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="send()">Send Message</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+const B = CONFIG.BUSINESS;
+document.getElementById("c-phone").textContent = B.phone;
+document.getElementById("c-email").textContent = B.email;
+document.getElementById("c-addr").textContent = B.address;
+document.getElementById("c-hours").innerHTML = UI.icon("clock",14) + " " + UI.esc(B.hours);
+document.getElementById("c-wa").href = "https://wa.me/" + B.whatsapp;
+
+async function send() {
+  const m = {
+    name: document.getElementById("m-name").value.trim(),
+    email: document.getElementById("m-email").value.trim(),
+    phone: document.getElementById("m-phone").value.trim(),
+    message: document.getElementById("m-text").value.trim()
+  };
+  if (!m.name || !m.email || !m.message) return UI.toast("Please fill name, email and message.", "err");
+  await DB.saveMessage(m);
+  Mail.send(B.name + " Admin", B.email, "New contact message from " + m.name,
+    `From: ${m.name} (${m.email}, ${m.phone})\n\n${m.message}`);
+  UI.toast("Message sent! We'll get back to you shortly.");
+  ["m-name", "m-email", "m-phone", "m-text"].forEach(id => document.getElementById(id).value = "");
+}
+</script>
+</body>
+</html>

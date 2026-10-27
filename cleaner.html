@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cleaner Portal — Judith Cleaning Services</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="https://res.cloudinary.com/dinypexvn/image/upload/v1792828963/judith-site/icon.png"><meta name="theme-color" content="#1fa968">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="cleaner">
+<div id="app-header"></div>
+
+<div class="container dash">
+  <aside class="side">
+    <a class="cur" data-t="jobs" onclick="tab('jobs')"><i data-icon="briefcase"></i> My Jobs</a>
+    <a data-t="today" onclick="tab('today')"><i data-icon="calendar"></i> Today's Schedule</a>
+    <a data-t="earnings" onclick="tab('earnings')"><i data-icon="wallet"></i> Earnings</a>
+    <a onclick="Auth.logout()"><i data-icon="logout"></i> Log Out</a>
+  </aside>
+
+  <main>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+      <div><h2 style="color:var(--navy)">Cleaner Portal</h2><p class="muted" id="hello"></p></div>
+      <label class="check-pill" id="avail-pill" style="margin:0">
+        <input type="checkbox" id="avail" onchange="setAvail()"> Available for jobs
+      </label>
+    </div>
+
+    <div id="t-jobs"><div class="stat-grid" id="c-stats"></div><div id="jobs-list"><p class="muted">Loading…</p></div></div>
+    <div id="t-today" hidden><h3 style="margin-bottom:14px;color:var(--navy)">Today — <span id="today-date"></span></h3><div id="today-list"></div></div>
+    <div id="t-earnings" hidden><div class="stat-grid" id="e-stats"></div><div id="earn-list"></div></div>
+  </main>
+</div>
+
+<!-- photo upload modal -->
+<div class="modal-bg" id="photo-modal" hidden>
+  <div class="modal">
+    <h3 style="color:var(--navy)">Upload <span id="pm-kind"></span> photos</h3>
+    <p class="muted" style="font-size:.88rem">Photos upload to Cloudinary and appear on the customer's tracking page.</p>
+    <input type="file" id="pm-files" accept="image/*" multiple style="margin-top:12px">
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-ghost" onclick="document.getElementById('photo-modal').hidden=true">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="pm-go" onclick="uploadPhotos()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<div id="app-footer"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/config.js"></script><script src="js/firebase-init.js"></script>
+<script src="js/data.js"></script><script src="js/auth.js"></script><script src="js/ui.js"></script>
+<script>
+let me = null, jobs = [], modalCtx = null;
+
+function tab(t) {
+  document.querySelectorAll("[data-t]").forEach(a => a.classList.toggle("cur", a.dataset.t === t));
+  ["jobs", "today", "earnings"].forEach(x => document.getElementById("t-" + x).hidden = x !== t);
+}
+
+Auth.require(["cleaner", "admin"], async (p) => {
+  me = p;
+  document.getElementById("hello").textContent = `Welcome, ${p.name}`;
+  document.getElementById("avail").checked = p.available !== false;
+  document.getElementById("avail-pill").classList.toggle("on", p.available !== false);
+  load();
+});
+
+async function setAvail() {
+  const v = document.getElementById("avail").checked;
+  await DB.updateUser(me.id, { available: v });
+  document.getElementById("avail-pill").classList.toggle("on", v);
+  UI.toast(v ? "You are now available for jobs" : "You are now unavailable.");
+}
+
+async function load() {
+  jobs = await DB.cleanerBookings(me.id);
+  const today = new Date().toISOString().split("T")[0];
+  const active = jobs.filter(b => !["completed", "cancelled"].includes(b.status));
+  const done = jobs.filter(b => b.status === "completed");
+  const earned = done.reduce((s, b) => s + (b.price ? b.price.total : 0), 0);
+
+  document.getElementById("c-stats").innerHTML = `
+    <div class="stat"><span class="ico"><i data-icon="briefcase"></i></span><b>${active.length}</b><span>Active jobs</span></div>
+    <div class="stat"><span class="ico"><i data-icon="calendar"></i></span><b>${jobs.filter(b => b.date === today && b.status !== "cancelled").length}</b><span>Jobs today</span></div>
+    <div class="stat"><span class="ico"><i data-icon="check-circle"></i></span><b>${done.length}</b><span>Completed</span></div>
+    <div class="stat"><span class="ico"><i data-icon="wallet"></i></span><b>${UI.money(earned)}</b><span>Total job value</span></div>`;
+
+  document.getElementById("jobs-list").innerHTML = active.length
+    ? active.map(jobCard).join("")
+    : `<div class="card empty"><div class="big"><i data-icon="smile"></i></div>No active jobs assigned to you yet.</div>`;
+
+  document.getElementById("today-date").textContent = UI.fmtDate(today);
+  const todays = jobs.filter(b => b.date === today && b.status !== "cancelled");
+  document.getElementById("today-list").innerHTML = todays.length
+    ? todays.map(jobCard).join("")
+    : `<div class="card empty"><div class="big"><i data-icon="sun"></i></div>Nothing scheduled today.</div>`;
+
+  document.getElementById("e-stats").innerHTML = `
+    <div class="stat"><span class="ico"><i data-icon="check-circle"></i></span><b>${done.length}</b><span>Jobs completed</span></div>
+    <div class="stat"><span class="ico"><i data-icon="wallet"></i></span><b>${UI.money(earned)}</b><span>Completed job value</span></div>
+    <div class="stat"><span class="ico"><i data-icon="chart"></i></span><b>${UI.money(done.length ? Math.round(earned / done.length) : 0)}</b><span>Average per job</span></div>`;
+  document.getElementById("earn-list").innerHTML = done.length ? `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Date</th><th>Service</th><th>Area</th><th>Value</th></tr></thead>
+    <tbody>${done.map(b => `<tr><td>${UI.fmtDate(b.date)}</td><td>${UI.esc(b.serviceName)}</td><td>${UI.esc(b.address.area)}</td><td><b>${UI.money(b.price.total)}</b></td></tr>`).join("")}</tbody>
+  </table></div>` : `<div class="card empty">No completed jobs yet.</div>`;
+}
+
+function jobCard(b) {
+  const mapsQ = encodeURIComponent(b.address.street + ", " + b.address.area + ", Lagos");
+  return `<div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h3>${UI.svcIcon(b.serviceIcon,15)} ${UI.esc(b.serviceName)}</h3>${UI.badge(b.status)}
+    </div>
+    <p class="muted" style="font-size:.92rem;margin:8px 0">
+      <i data-icon="calendar"></i> <b>${UI.fmtDate(b.date)} · ${b.time}</b><br>
+      <i data-icon="user"></i> ${UI.esc(b.customer.name)} · <a href="tel:${b.customer.phone}">${UI.esc(b.customer.phone)}</a><br>
+      <i data-icon="pin"></i> ${UI.esc(b.address.street)}, ${UI.esc(b.address.area)}
+      — <a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${mapsQ}">Navigate <i data-icon="navigation"></i></a><br>
+      <i data-icon="bed"></i> ${b.details.bedrooms} bed · <i data-icon="droplet"></i> ${b.details.bathrooms} bath ${b.details.addons.length ? '· <i data-icon="plus"></i> ' + b.details.addons.join(", ") : ""}<br>
+      ${b.notes ? '<i data-icon="edit"></i> ' + UI.esc(b.notes) + "<br>" : ""}
+      <i data-icon="wallet"></i> <b>${UI.money(b.price.total)}</b> (${b.payment.status === "paid" ? 'paid online <i data-icon="check-circle"></i>' : 'collect after service <i data-icon="wallet"></i>'})
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${b.status === "assigned" ? `
+        <button class="btn btn-primary btn-sm" onclick="setStatus('${b.id}','on_the_way')"><i data-icon="truck"></i> On My Way</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectJob('${b.id}')">Reject Job</button>` : ""}
+      ${b.status === "on_the_way" ? `<button class="btn btn-primary btn-sm" onclick="setStatus('${b.id}','in_progress')"><i data-icon="play"></i> Start Job</button>` : ""}
+      ${b.status === "in_progress" ? `
+        <button class="btn btn-ghost btn-sm" onclick="openPhotos('${b.id}','before')"><i data-icon="camera"></i> Before Photos (${b.photos.before.length})</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPhotos('${b.id}','after')"><i data-icon="camera"></i> After Photos (${b.photos.after.length})</button>
+        <button class="btn btn-gold btn-sm" onclick="completeJob('${b.id}')"><i data-icon="check-circle"></i> Complete Job</button>` : ""}
+      <button class="btn btn-sm" onclick="addNote('${b.id}')"><i data-icon="edit"></i> Add Note</button>
+    </div>
+  </div>`;
+}
+
+async function setStatus(id, status) {
+  await DB.updateBooking(id, { status });
+  const b = jobs.find(x => x.id === id);
+  if (b) Mail.send(b.customer.name, b.customer.email,
+    `Update on your cleaning — ${UI.STATUS[status].label}`,
+    `Hi ${b.customer.name},\n\nStatus update for booking ${id}: ${UI.STATUS[status].label}.\n\n— ${CONFIG.BUSINESS.name}`);
+  UI.toast("Status updated: " + UI.STATUS[status].label); load();
+}
+async function rejectJob(id) {
+  if (!confirm("Reject this job? It will go back to the admin for reassignment.")) return;
+  await DB.updateBooking(id, { status: "confirmed", cleanerId: null, cleanerName: null });
+  UI.toast("Job rejected and returned to admin."); load();
+}
+async function completeJob(id) {
+  const b = jobs.find(x => x.id === id);
+  if (b && !b.photos.after.length && !confirm("No AFTER photos uploaded. Complete anyway?")) return;
+  await setStatus(id, "completed");
+}
+async function addNote(id) {
+  const n = prompt("Job note:");
+  if (!n) return;
+  const b = jobs.find(x => x.id === id);
+  await DB.updateBooking(id, { notes: ((b && b.notes) ? b.notes + " | " : "") + "[Cleaner] " + n });
+  UI.toast("Note added."); load();
+}
+function openPhotos(id, kind) {
+  modalCtx = { id, kind };
+  document.getElementById("pm-kind").textContent = kind.toUpperCase();
+  document.getElementById("pm-files").value = "";
+  document.getElementById("photo-modal").hidden = false;
+}
+async function uploadPhotos() {
+  const files = document.getElementById("pm-files").files;
+  if (!files.length) return UI.toast("Choose at least one photo.", "err");
+  const btn = document.getElementById("pm-go");
+  btn.disabled = true; btn.textContent = "Uploading…";
+  try {
+    const urls = [];
+    for (const f of files) urls.push(await Cloud.upload(f));
+    const b = jobs.find(x => x.id === modalCtx.id);
+    const photos = { ...b.photos };
+    photos[modalCtx.kind] = [...photos[modalCtx.kind], ...urls];
+    await DB.updateBooking(modalCtx.id, { photos });
+    UI.toast(urls.length + " photo(s) uploaded");
+    document.getElementById("photo-modal").hidden = true;
+    load();
+  } catch (e) { UI.toast("Upload failed: " + e.message, "err"); }
+  btn.disabled = false; btn.textContent = "Upload";
+}
+</script>
+</body>
+</html>
